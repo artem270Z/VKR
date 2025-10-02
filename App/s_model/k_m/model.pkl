@@ -1,0 +1,82 @@
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.neural_network import MLPRegressor
+from sklearn.metrics import mean_absolute_error
+import matplotlib.pyplot as plt
+import pickle  # Добавляем импорт pickle
+
+# Сформируем входы и выход для модели
+tv = df['Соотношение матрица-наполнитель']
+tr_v = df.drop('Соотношение матрица-наполнитель', axis=1)
+
+# Разбиваем выборки на обучающую и тестовую
+x_train, x_test, y_train, y_test = train_test_split(
+    tr_v, tv, test_size=0.3, random_state=14
+)
+
+# Нормализуем данные
+scaler = StandardScaler()
+x_train = scaler.fit_transform(x_train)
+x_test = scaler.transform(x_test)
+
+# Создаем модель нейронной сети
+mlp = MLPRegressor(random_state=42)
+
+# Определяем параметры для поиска
+param_grid = {
+    'hidden_layer_sizes': [(32,), (64, 32), (128, 64, 32)],
+    'activation': ['tanh', 'relu'],
+    'solver': ['sgd', 'adam'],
+    'alpha': [0.0001, 0.001, 0.01],
+    'learning_rate': ['constant', 'adaptive'],
+    'max_iter': [200, 300, 500]
+}
+
+# Поиск оптимальных параметров
+grid = GridSearchCV(
+    estimator=mlp,
+    param_grid=param_grid,
+    cv=5,
+    n_jobs=-1,
+    verbose=1,
+    scoring='neg_mean_absolute_error'
+)
+
+grid_result = grid.fit(x_train, y_train)
+
+# Результаты
+print("Best: %.4f using %s" % (grid_result.best_score_, grid_result.best_params_))
+
+# Лучшая модель
+best_model = grid_result.best_estimator_
+
+# Сохраняем модель и скалер
+with open('model.pkl', 'wb') as file:
+    pickle.dump(best_model, file)
+
+with open('scaler.pkl', 'wb') as file:
+    pickle.dump(scaler, file)
+
+# Оценка модели
+y_pred = best_model.predict(x_test)
+mae = mean_absolute_error(y_test, y_pred)
+print(f"\nMean Absolute Error: {mae:.4f}")
+
+# Визуализация результатов
+plt.figure(figsize=(12, 6))
+plt.scatter(y_test, y_pred)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=2)
+plt.xlabel('Фактические значения')
+plt.ylabel('Предсказанные значения')
+plt.title('Сравнение фактических и предсказанных значений')
+plt.show()
+
+# График ошибок
+plt.figure(figsize=(12, 6))
+plt.plot(best_model.loss_curve_)
+plt.title('График потерь')
+plt.xlabel('Итерации')
+plt.ylabel('Потеря')
+plt.show

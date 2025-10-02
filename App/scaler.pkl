@@ -1,0 +1,11 @@
+# Обучающий скрипт
+from sklearn.preprocessing import StandardScaler
+import pickle
+
+# Создаем скалер и обучаем его
+scaler = StandardScaler()
+scaler.fit(ваши_обучающие_данные)  # Здесь должны быть ваши обучающие данные
+
+# Сохраняем скалер в файл
+with open('scaler.pkl', 'wb') as file:
+    pickle.dump(scaler, file)
